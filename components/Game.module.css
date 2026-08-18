@@ -1,0 +1,61 @@
+.shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: min(100%, 520px);
+  padding: 28px 16px 36px;
+}
+
+.glowA,
+.glowB {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(8px);
+}
+
+.glowA {
+  width: 280px;
+  height: 280px;
+  top: -40px;
+  left: -60px;
+  background: rgba(34, 230, 255, 0.12);
+}
+
+.glowB {
+  width: 260px;
+  height: 260px;
+  right: -50px;
+  bottom: 40px;
+  background: rgba(255, 43, 214, 0.12);
+}
+
+.pauseBtn,
+.pauseBtnSpacer,
+.shell > header,
+.shell > div[role="grid"] {
+  position: relative;
+  z-index: 1;
+}
+
+.pauseBtn,
+.pauseBtnSpacer {
+  min-height: 40px;
+}
+
+.pauseBtn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(12, 16, 28, 0.7);
+  border: 1px solid rgba(120, 170, 230, 0.24);
+  cursor: pointer;
+}
+
+.pauseBtn:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(34, 230, 255, 0.25);
+}
