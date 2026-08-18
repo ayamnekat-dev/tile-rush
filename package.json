@@ -2,6 +2,7 @@
   "name": "tile-rush",
   "version": "0.1.0",
   "private": true,
+  "author": "Ayam Nekat",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
