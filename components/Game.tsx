@@ -1,17 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   createInitialState,
   gameReducer,
   INITIAL_LIVES,
   type GameAction,
 } from "@/lib/game";
-import {
-  getHighScoreServerSnapshot,
-  getHighScoreSnapshot,
-  subscribeHighScore,
-} from "@/lib/storage";
+import { getHighScoreServerSnapshot, getHighScoreSnapshot, subscribeHighScore } from "@/lib/storage";
+import { soundFx } from "@/lib/sound";
+import { AudioToggle } from "./AudioToggle";
 import { Board } from "./Board";
 import { GameOverScreen } from "./GameOverScreen";
 import { Hud } from "./Hud";
@@ -31,6 +29,70 @@ export function Game() {
     getHighScoreSnapshot,
     getHighScoreServerSnapshot,
   );
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prevLivesRef = useRef(state.lives);
+  const prevPhaseRef = useRef(state.phase);
+
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("tilerush_bgm_muted") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const audio = new Audio("/music/background.mp3");
+    audio.loop = true;
+    audio.volume = 0.4;
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      audioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (state.phase === "playing" && state.lives < prevLivesRef.current) {
+      soundFx.playMiss(isMuted);
+    }
+    if (state.phase === "gameover" && prevPhaseRef.current !== "gameover") {
+      soundFx.playGameOver(isMuted);
+    }
+    prevLivesRef.current = state.lives;
+    prevPhaseRef.current = state.phase;
+  }, [state.lives, state.phase, isMuted]);
+
+  const playMusic = useCallback(() => {
+    if (audioRef.current && !isMuted) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.muted = isMuted;
+    if (!isMuted && (state.phase === "playing" || state.phase === "menu")) {
+      playMusic();
+    }
+  }, [isMuted, state.phase, playMusic]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tilerush_bgm_muted", String(next));
+      }
+      if (audioRef.current) {
+        audioRef.current.muted = next;
+        if (!next) {
+          audioRef.current.play().catch(() => {});
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const applyAction = useCallback((action: GameAction) => {
     setState((current) => gameReducer(current, action));
@@ -54,13 +116,20 @@ export function Game() {
     setFeedback({});
     setNow(timestamp);
     applyAction({ type: "START", now: timestamp });
-  }, [applyAction]);
+    playMusic();
+  }, [applyAction, playMusic]);
 
   const tap = useCallback(
     (index: number) => {
       if (state.phase !== "playing") return;
 
       const wasActive = state.activeTiles.some((tile) => tile.index === index);
+      if (wasActive) {
+        soundFx.playHit(isMuted);
+      } else {
+        soundFx.playMiss(isMuted);
+      }
+
       setFeedback((current) => ({
         ...current,
         [index]: wasActive ? "hit" : "miss",
@@ -75,7 +144,7 @@ export function Game() {
 
       applyAction({ type: "TAP", index, now: Date.now() });
     },
-    [applyAction, state.activeTiles, state.phase],
+    [applyAction, isMuted, state.activeTiles, state.phase],
   );
 
   useEffect(() => {
@@ -107,7 +176,8 @@ export function Game() {
     state.phase === "gameover" && state.score > bestAtStart && state.score > 0;
 
   return (
-    <section className={styles.shell}>
+    <section className={styles.shell} onClick={playMusic}>
+      <AudioToggle isMuted={isMuted} onToggle={toggleMute} />
       <div className={styles.glowA} />
       <div className={styles.glowB} />
 
